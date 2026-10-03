@@ -8,15 +8,16 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import fr.nico7an.spotlight.R
 import fr.nico7an.spotlight.data.AppEntry
 import fr.nico7an.spotlight.data.AppRepository
@@ -46,19 +47,27 @@ class SearchActivity : ComponentActivity() {
         val repository = AppRepository.get(this).also { it.refreshAsync() }
         val usage = UsageStore.get(this)
 
-        setContent {
-            SpotlightTheme {
-                SearchScreen(
-                    repository = repository,
-                    usage = usage,
-                    showSuggestions = settings.showSuggestions,
-                    session = session,
-                    onLaunchApp = ::launchApp,
-                    onStoreSearch = ::searchStore,
-                    onDismiss = ::finish,
-                )
-            }
-        }
+        val root = PreImeKeyLayout(this)
+        root.addView(
+            ComposeView(this).apply {
+                setContent {
+                    SpotlightTheme {
+                        SearchScreen(
+                            repository = repository,
+                            usage = usage,
+                            showSuggestions = settings.showSuggestions,
+                            session = session,
+                            onLaunchApp = ::launchApp,
+                            onStoreSearch = ::searchStore,
+                            onDismiss = ::finish,
+                            registerKeyHandler = { root.onKey = it },
+                        )
+                    }
+                }
+            },
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+        )
+        setContentView(root)
     }
 
     private fun setupWindow(blur: Boolean) {

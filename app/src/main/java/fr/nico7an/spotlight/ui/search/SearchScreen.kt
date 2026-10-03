@@ -47,12 +47,14 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,7 +74,6 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -115,6 +116,7 @@ fun SearchScreen(
     onLaunchApp: (AppEntry) -> Unit,
     onStoreSearch: (String) -> Unit,
     onDismiss: () -> Unit,
+    registerKeyHandler: (((android.view.KeyEvent) -> Boolean)?) -> Unit,
 ) {
     val palette = LocalSpotlightPalette.current
     val apps by repository.apps.collectAsState()
@@ -169,6 +171,13 @@ fun SearchScreen(
             }
             else -> false
         }
+    }
+
+    // Les touches de navigation sont traitées avant l'IME (voir PreImeKeyLayout).
+    val latestOnKey by rememberUpdatedState<(KeyEvent) -> Boolean>(::onKey)
+    DisposableEffect(Unit) {
+        registerKeyHandler { latestOnKey(KeyEvent(it)) }
+        onDispose { registerKeyHandler(null) }
     }
 
     LaunchedEffect(session) {
@@ -233,7 +242,6 @@ fun SearchScreen(
                         selected = 0
                     },
                     focusRequester = focusRequester,
-                    onKey = ::onKey,
                     onGo = { activate(current) },
                     onClear = {
                         query = TextFieldValue("")
@@ -282,7 +290,6 @@ private fun SearchField(
     query: TextFieldValue,
     onQueryChange: (TextFieldValue) -> Unit,
     focusRequester: FocusRequester,
-    onKey: (KeyEvent) -> Boolean,
     onGo: () -> Unit,
     onClear: () -> Unit,
 ) {
@@ -311,8 +318,7 @@ private fun SearchField(
                 keyboardActions = KeyboardActions(onGo = { onGo() }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .focusRequester(focusRequester)
-                    .onPreviewKeyEvent(onKey),
+                    .focusRequester(focusRequester),
             )
         }
         AnimatedVisibility(
