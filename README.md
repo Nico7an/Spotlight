@@ -41,6 +41,13 @@
 Le service tourne au premier plan pour résister au nettoyage mémoire de HyperOS. Sa notification (priorité minimale)
 n'apparaît que si vous autorisez les notifications de Spotlight.
 
+### Mises à jour
+
+Spotlight se met à jour tout seul depuis les releases de ce repo (section *Mises à jour* de l'app) : vérification
+toutes les 6 heures, téléchargement puis installation en arrière-plan. Il faut autoriser une fois Spotlight à
+installer des apps. La première mise à jour depuis l'app demande une confirmation ; Android 12+ autorise ensuite les
+suivantes sans intervention, car Spotlight devient l'installateur de sa propre version.
+
 > Les mises à jour s'installent par-dessus la version précédente : toutes les releases sont signées avec la même clé
 > (`app/spotlight.keystore`, volontairement publique, l'app n'étant pas destinée au Play Store).
 

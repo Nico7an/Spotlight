@@ -14,6 +14,7 @@ data class SystemStatus(
     val popupAllowed: Boolean? = true,
     val autoStartAllowed: Boolean? = true,
     val batteryUnrestricted: Boolean = true,
+    val canInstallPackages: Boolean = false,
 ) {
     val ready: Boolean
         get() = serviceEnabled && serviceRunning && popupAllowed != false
@@ -29,6 +30,7 @@ data class SystemStatus(
                 popupAllowed = if (xiaomi) XiaomiPermissions.canStartFromBackground(context) else true,
                 autoStartAllowed = if (xiaomi) XiaomiPermissions.canAutoStart(context) else true,
                 batteryUnrestricted = power.isIgnoringBatteryOptimizations(context.packageName),
+                canInstallPackages = context.packageManager.canRequestPackageInstalls(),
             )
         }
     }

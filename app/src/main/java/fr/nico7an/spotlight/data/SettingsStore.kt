@@ -46,12 +46,20 @@ class SettingsStore private constructor(context: Context) {
             prefs.edit().putBoolean(KEY_BLUR, value).apply()
         }
 
+    @Volatile
+    var autoUpdate: Boolean = prefs.getBoolean(KEY_AUTO_UPDATE, true)
+        set(value) {
+            field = value
+            prefs.edit().putBoolean(KEY_AUTO_UPDATE, value).apply()
+        }
+
     companion object {
         private const val KEY_SHORTCUT = "shortcut"
         private const val KEY_CUSTOM = "custom_shortcut"
         private const val KEY_BLOCK_SYSTEM = "block_system_action"
         private const val KEY_SUGGESTIONS = "show_suggestions"
         private const val KEY_BLUR = "blur_background"
+        private const val KEY_AUTO_UPDATE = "auto_update"
 
         @Volatile
         private var instance: SettingsStore? = null

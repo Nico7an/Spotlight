@@ -21,6 +21,7 @@ import fr.nico7an.spotlight.core.TriggerDetector
 import fr.nico7an.spotlight.data.AppRepository
 import fr.nico7an.spotlight.data.SettingsStore
 import fr.nico7an.spotlight.ui.search.SearchActivity
+import fr.nico7an.spotlight.update.UpdateManager
 import fr.nico7an.spotlight.ui.settings.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,7 @@ class SpotlightAccessibilityService : AccessibilityService() {
         _running.value = true
         keepAlive()
         AppRepository.get(this).refreshAsync()
+        UpdateManager.get(this).startAutoUpdates()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {

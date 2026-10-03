@@ -29,9 +29,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +43,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +69,8 @@ import fr.nico7an.spotlight.service.XiaomiPermissions
 import fr.nico7an.spotlight.ui.search.KeyCap
 import fr.nico7an.spotlight.ui.search.SearchActivity
 import fr.nico7an.spotlight.ui.theme.LocalSpotlightPalette
+import fr.nico7an.spotlight.update.UpdateManager
+import fr.nico7an.spotlight.update.UpdateState
 
 private data class Preset(val shortcut: Shortcut, val title: String, val subtitle: String)
 
@@ -198,17 +204,7 @@ fun SettingsScreen(status: SystemStatus, settings: SettingsStore) {
                     }
                 }
 
-                item {
-                    Text(
-                        text = "Spotlight ${BuildConfig.VERSION_NAME}",
-                        color = palette.placeholder,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 28.dp),
-                    )
-                }
+                item { UpdatesGroup(status, settings) }
             }
         }
     }
@@ -331,6 +327,74 @@ private fun PermissionRow(
         },
         onClick = onClick,
     )
+}
+
+@Composable
+private fun UpdatesGroup(status: SystemStatus, settings: SettingsStore) {
+    val context = LocalContext.current
+    val palette = LocalSpotlightPalette.current
+    val manager = remember { UpdateManager.get(context) }
+    val state by manager.state.collectAsState()
+    var auto by remember { mutableStateOf(settings.autoUpdate) }
+
+    LaunchedEffect(Unit) {
+        if (state is UpdateState.Idle || state is UpdateState.Failed) manager.check()
+    }
+
+    fun install() {
+        if (status.canInstallPackages) manager.install() else context.openInstallPermission()
+    }
+
+    SettingsGroup("Mises à jour") {
+        SettingsRow(
+            title = "Spotlight ${BuildConfig.VERSION_NAME}",
+            subtitle = when (val s = state) {
+                UpdateState.Idle, UpdateState.Checking -> "Recherche de mises à jour…"
+                UpdateState.UpToDate -> "Vous avez la dernière version"
+                is UpdateState.Available -> "Version ${s.release.version} disponible"
+                is UpdateState.Downloading -> "Téléchargement de la version ${s.release.version}… ${(s.progress * 100).toInt()} %"
+                is UpdateState.Installing -> "Installation de la version ${s.release.version}…"
+                is UpdateState.Failed -> s.message
+            },
+            leading = {
+                when (state) {
+                    UpdateState.UpToDate -> StatusBadge(Icons.Rounded.Check, palette.success)
+                    is UpdateState.Failed -> StatusBadge(Icons.Rounded.Warning, palette.warning)
+                    else -> StatusBadge(Icons.Rounded.Refresh, palette.accent)
+                }
+            },
+            trailing = {
+                when (val s = state) {
+                    UpdateState.Idle, UpdateState.Checking, is UpdateState.Installing ->
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                    is UpdateState.Downloading ->
+                        CircularProgressIndicator(progress = { s.progress }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                    is UpdateState.Available ->
+                        FilledTonalButton(onClick = ::install) { Text("Installer") }
+                    else -> TextButton(onClick = { manager.check() }) { Text("Rechercher") }
+                }
+            },
+        )
+        if (!status.canInstallPackages) {
+            GroupDivider()
+            PermissionRow(
+                title = "Installation des mises à jour",
+                granted = false,
+                grantedText = "",
+                missingText = "Autorisez Spotlight à installer des apps pour se mettre à jour",
+                onClick = { context.openInstallPermission() },
+            )
+        }
+        GroupDivider()
+        SwitchRow(
+            title = "Mises à jour automatiques",
+            subtitle = "Vérifie toutes les 6 heures et installe les nouvelles versions en arrière-plan",
+            checked = auto,
+        ) {
+            auto = it
+            settings.autoUpdate = it
+        }
+    }
 }
 
 @Composable
@@ -480,6 +544,13 @@ private fun Chevron() {
 
 private fun Context.openAccessibilitySettings() {
     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
+private fun Context.openInstallPermission() {
+    startActivity(
+        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
 }
 
 @SuppressLint("BatteryLife")
