@@ -58,7 +58,8 @@ class SpotlightAccessibilityService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent): Boolean {
         ShortcutRecorder.active?.let { return it.onKey(event) }
         if (!::settings.isInitialized) return false
-        return detector.onKey(KeyInput.of(event), settings.shortcut, settings.blockSystemAction)
+        if (detector.onKey(KeyInput.of(event), settings.shortcut, settings.blockSystemAction)) return true
+        return SearchActivity.dispatchNavigationKey(event)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit

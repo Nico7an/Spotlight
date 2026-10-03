@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
@@ -31,6 +32,9 @@ class SearchActivity : ComponentActivity() {
     /** Incrémenté à chaque réouverture pour repartir d'une recherche vide. */
     private var session by mutableIntStateOf(0)
 
+    private var root: PreImeKeyLayout? = null
+    private var inForeground = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val transparent = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
         enableEdgeToEdge(statusBarStyle = transparent, navigationBarStyle = transparent)
@@ -47,8 +51,8 @@ class SearchActivity : ComponentActivity() {
         val repository = AppRepository.get(this).also { it.refreshAsync() }
         val usage = UsageStore.get(this)
 
-        val root = PreImeKeyLayout(this)
-        root.addView(
+        val layout = PreImeKeyLayout(this).also { root = it }
+        layout.addView(
             ComposeView(this).apply {
                 setContent {
                     SpotlightTheme {
@@ -60,14 +64,14 @@ class SearchActivity : ComponentActivity() {
                             onLaunchApp = ::launchApp,
                             onStoreSearch = ::searchStore,
                             onDismiss = ::finish,
-                            registerKeyHandler = { root.onKey = it },
+                            registerKeyHandler = { layout.onKey = it },
                         )
                     }
                 }
             },
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
         )
-        setContentView(root)
+        setContentView(layout)
     }
 
     private fun setupWindow(blur: Boolean) {
@@ -80,6 +84,16 @@ class SearchActivity : ComponentActivity() {
             }
         }
         window.setDimAmount(if (canBlur) 0.2f else 0.4f)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        inForeground = true
+    }
+
+    override fun onPause() {
+        inForeground = false
+        super.onPause()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -141,6 +155,37 @@ class SearchActivity : ComponentActivity() {
                 Intent(context, SearchActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         }
+
+        private val NAVIGATION_KEYS = setOf(
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_TAB,
+            KeyEvent.KEYCODE_PAGE_UP,
+            KeyEvent.KEYCODE_PAGE_DOWN,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_ESCAPE,
+        )
+
+        /**
+         * Appelé par le service d'accessibilité, qui voit les touches avant l'IME et HyperOS :
+         * c'est la seule voie fiable pour naviguer dans les résultats avec le clavier physique.
+         * Renvoie `true` si la touche a été prise en charge par la recherche affichée.
+         */
+        fun dispatchNavigationKey(event: KeyEvent): Boolean {
+            if (event.keyCode !in NAVIGATION_KEYS) return false
+            // Le relâchement d'une touche déjà traitée est avalé, même si la fenêtre s'est
+            // fermée entre-temps (Entrée ne doit pas fuiter dans l'app qu'on vient d'ouvrir).
+            if (event.action == KeyEvent.ACTION_UP) return handledKeys.remove(event.keyCode)
+            val activity = current?.get() ?: return false
+            if (!activity.inForeground || activity.isFinishing) return false
+            val handler = activity.root?.onKey ?: return false
+            handler(event)
+            handledKeys += event.keyCode
+            return true
+        }
+
+        private val handledKeys = HashSet<Int>()
 
         val isShowing: Boolean
             get() = current?.get()?.let { !it.isFinishing && !it.isDestroyed } ?: false
