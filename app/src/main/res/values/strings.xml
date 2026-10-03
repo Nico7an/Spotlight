@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Spotlight</string>
+    <string name="a11y_label">Spotlight – raccourci clavier</string>
+    <string name="a11y_description">Détecte le raccourci clavier configuré (touche Meta, Alt + Espace…) pour ouvrir la recherche d\'apps Spotlight. Aucune autre touche n\'est enregistrée et aucun contenu de l\'écran n\'est lu.</string>
+    <string name="launch_failed">Impossible d\'ouvrir %1$s</string>
+</resources>

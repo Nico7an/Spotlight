@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Spotlight" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/settings_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Fenêtre de recherche : transparente, posée au-dessus de l'app courante. -->
+    <style name="Theme.Spotlight.Search" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Spotlight</item>
+    </style>
+
+    <style name="Animation.Spotlight" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/spotlight_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/spotlight_hold</item>
+        <item name="android:activityCloseEnterAnimation">@anim/spotlight_hold</item>
+        <item name="android:activityCloseExitAnimation">@anim/spotlight_exit</item>
+        <item name="android:taskOpenEnterAnimation">@anim/spotlight_enter</item>
+        <item name="android:taskOpenExitAnimation">@anim/spotlight_hold</item>
+        <item name="android:taskCloseEnterAnimation">@anim/spotlight_hold</item>
+        <item name="android:taskCloseExitAnimation">@anim/spotlight_exit</item>
+    </style>
+</resources>
