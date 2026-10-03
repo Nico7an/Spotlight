@@ -1,24 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="18 18 72 72">
   <defs>
-    <linearGradient id="bg" x1="30" y1="18" x2="78" y2="90" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#62B0FF"/>
-      <stop offset="1" stop-color="#2A42D8"/>
+    <linearGradient id="bg" x1="54" y1="18" x2="54" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EEF2F8"/>
     </linearGradient>
-    <radialGradient id="sheen" cx="54" cy="12" r="62" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
+    <linearGradient id="glyph" x1="36" y1="36" x2="72" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FA0FF"/>
+      <stop offset="1" stop-color="#1F4FE0"/>
+    </linearGradient>
     <clipPath id="sq"><rect x="18" y="18" width="72" height="72" rx="17"/></clipPath>
   </defs>
   <g clip-path="url(#sq)">
     <rect width="108" height="108" fill="url(#bg)"/>
-    <rect width="108" height="108" fill="url(#sheen)"/>
-    <g transform="translate(0 1.2)" stroke="#0B2A8A" stroke-opacity="0.16" fill="none" stroke-linecap="round">
-      <circle cx="50.5" cy="50.5" r="13" stroke-width="4"/>
-      <path d="M60.4 60.4L69.6 69.6" stroke-width="5.2"/>
+    <g transform="translate(0 1.2)" stroke="#1F4FE0" stroke-opacity="0.09" fill="none" stroke-linecap="round">
+      <circle cx="50.5" cy="50.5" r="12.5" stroke-width="5.6"/>
+      <path d="M60.4 60.4L69.6 69.6" stroke-width="7"/>
     </g>
-    <circle cx="50.5" cy="50.5" r="11" fill="#FFFFFF" fill-opacity="0.08"/>
-    <circle cx="50.5" cy="50.5" r="13" stroke="#FFFFFF" stroke-width="4" fill="none"/>
-    <path d="M60.4 60.4L69.6 69.6" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round"/>
+    <circle cx="50.5" cy="50.5" r="10" fill="#2F74FF" fill-opacity="0.07"/>
+    <circle cx="50.5" cy="50.5" r="12.5" stroke="url(#glyph)" stroke-width="5.6" fill="none"/>
+    <path d="M60.4 60.4L69.6 69.6" stroke="url(#glyph)" stroke-width="7" stroke-linecap="round"/>
   </g>
 </svg>
