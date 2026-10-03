@@ -29,8 +29,14 @@
 2. Ouvrez **Spotlight**, puis touchez **Activer** : dans *Accessibilité*, activez **Spotlight – raccourci clavier**.
 3. Si l'option est grisée (« paramètre restreint », Android 13+ / HyperOS) :
    *Paramètres → Applications → Spotlight → ⋮ (en haut à droite) → Autoriser les paramètres restreints*, puis recommencez l'étape 2.
-4. Sur HyperOS, pour éviter que le système ne coupe le service : *Infos de l'app → Démarrage automatique* activé et
+4. **Xiaomi / HyperOS (indispensable)** : *Infos de l'app → Autorisations → Autres autorisations →*
+   **Afficher des fenêtres pop-up en arrière-plan** → Autoriser. Sans cela, le raccourci est bien détecté mais HyperOS
+   empêche silencieusement la fenêtre de s'ouvrir (le bouton **Autoriser** de l'app ouvre directement cet écran).
+5. Toujours sur HyperOS, pour éviter que le système ne coupe le service : *Démarrage automatique* activé et
    *Économiseur de batterie → Aucune restriction*.
+
+En cas de souci, la section **Diagnostic** de l'app indique si le service est connecté, la dernière touche reçue
+et si le dernier déclenchement a été bloqué.
 
 > Les mises à jour s'installent par-dessus la version précédente : toutes les releases sont signées avec la même clé
 > (`app/spotlight.keystore`, volontairement publique, l'app n'étant pas destinée au Play Store).
