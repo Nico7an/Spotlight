@@ -54,7 +54,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -107,6 +108,77 @@ private sealed interface ResultItem {
     }
 }
 
+/**
+ * État de la recherche, lu en direct par le gestionnaire de touches.
+ *
+ * Le clavier physique arrive par un callback hors composition : il ne doit jamais capturer une
+ * valeur figée (liste ou sélection d'un affichage précédent), d'où cet objet unique.
+ */
+@Stable
+private class SearchController(
+    private val usage: UsageStore,
+    private val showSuggestions: Boolean,
+    private val onLaunchApp: (AppEntry) -> Unit,
+    private val onStoreSearch: (String) -> Unit,
+    private val onDismiss: () -> Unit,
+) {
+    var apps by mutableStateOf<List<AppEntry>>(emptyList())
+    var query by mutableStateOf(TextFieldValue(""))
+        private set
+    private var selected by mutableIntStateOf(0)
+
+    val items: List<ResultItem> by derivedStateOf {
+        val text = query.text
+        if (text.isBlank()) {
+            if (showSuggestions) usage.suggestions(apps).map(ResultItem::App) else emptyList()
+        } else {
+            SearchEngine.search(apps, text) { usage.boost(it.key) }
+                .map<AppEntry, ResultItem>(ResultItem::App)
+                .ifEmpty { listOf(ResultItem.StoreSearch(text.trim())) }
+        }
+    }
+
+    val current: Int
+        get() = items.let { if (it.isEmpty()) -1 else selected.coerceIn(0, it.lastIndex) }
+
+    fun updateQuery(value: TextFieldValue) {
+        if (value.text != query.text) selected = 0
+        query = value
+    }
+
+    fun clear() = updateQuery(TextFieldValue(""))
+
+    fun activate(index: Int = current) {
+        when (val item = items.getOrNull(index)) {
+            is ResultItem.App -> onLaunchApp(item.app)
+            is ResultItem.StoreSearch -> onStoreSearch(item.query)
+            null -> Unit
+        }
+    }
+
+    private fun move(delta: Int, wrap: Boolean = true) {
+        val size = items.size
+        if (size == 0) return
+        val target = current + delta
+        selected = if (wrap) target.mod(size) else target.coerceIn(0, size - 1)
+    }
+
+    fun onKey(event: KeyEvent): Boolean {
+        if (event.type != KeyEventType.KeyDown) return false
+        when (event.key) {
+            Key.DirectionDown -> move(1)
+            Key.DirectionUp -> move(-1)
+            Key.Tab -> move(if (event.isShiftPressed) -1 else 1)
+            Key.PageDown -> move(5, wrap = false)
+            Key.PageUp -> move(-5, wrap = false)
+            Key.Enter, Key.NumPadEnter -> activate()
+            Key.Escape -> if (query.text.isNotEmpty()) clear() else onDismiss()
+            else -> return false
+        }
+        return true
+    }
+}
+
 @Composable
 fun SearchScreen(
     repository: AppRepository,
@@ -119,64 +191,20 @@ fun SearchScreen(
     registerKeyHandler: (((android.view.KeyEvent) -> Boolean)?) -> Unit,
 ) {
     val palette = LocalSpotlightPalette.current
-    val apps by repository.apps.collectAsState()
-    var query by remember(session) { mutableStateOf(TextFieldValue("")) }
-    var selected by remember(session) { mutableIntStateOf(0) }
+    val controller = remember(session) {
+        SearchController(usage, showSuggestions, onLaunchApp, onStoreSearch, onDismiss)
+    }
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
 
-    val items: List<ResultItem> = remember(query.text, apps, showSuggestions) {
-        if (query.text.isBlank()) {
-            if (showSuggestions) usage.suggestions(apps).map(ResultItem::App) else emptyList()
-        } else {
-            SearchEngine.search(apps, query.text) { usage.boost(it.key) }
-                .map<AppEntry, ResultItem>(ResultItem::App)
-                .ifEmpty { listOf(ResultItem.StoreSearch(query.text.trim())) }
-        }
-    }
-    val current = if (items.isEmpty()) -1 else selected.coerceIn(0, items.lastIndex)
-
-    fun activate(index: Int) {
-        when (val item = items.getOrNull(index)) {
-            is ResultItem.App -> onLaunchApp(item.app)
-            is ResultItem.StoreSearch -> onStoreSearch(item.query)
-            null -> Unit
-        }
+    LaunchedEffect(controller) {
+        repository.apps.collect { controller.apps = it }
     }
 
-    fun move(delta: Int, wrap: Boolean = true) {
-        if (items.isEmpty()) return
-        val target = current + delta
-        selected = if (wrap) target.mod(items.size) else target.coerceIn(0, items.lastIndex)
-    }
-
-    fun onKey(event: KeyEvent): Boolean {
-        if (event.type != KeyEventType.KeyDown) return false
-        return when (event.key) {
-            Key.DirectionDown -> { move(1); true }
-            Key.DirectionUp -> { move(-1); true }
-            Key.Tab -> { move(if (event.isShiftPressed) -1 else 1); true }
-            Key.PageDown -> { move(5, wrap = false); true }
-            Key.PageUp -> { move(-5, wrap = false); true }
-            Key.Enter, Key.NumPadEnter -> { activate(current); true }
-            Key.Escape -> {
-                if (query.text.isNotEmpty()) {
-                    query = TextFieldValue("")
-                    selected = 0
-                } else {
-                    onDismiss()
-                }
-                true
-            }
-            else -> false
-        }
-    }
-
-    // Les touches de navigation sont traitées avant l'IME (voir PreImeKeyLayout).
-    val latestOnKey by rememberUpdatedState<(KeyEvent) -> Boolean>(::onKey)
-    DisposableEffect(Unit) {
-        registerKeyHandler { latestOnKey(KeyEvent(it)) }
+    // Touches de navigation : relayées par le service d'accessibilité ou interceptées avant l'IME.
+    DisposableEffect(controller) {
+        registerKeyHandler { controller.onKey(KeyEvent(it)) }
         onDispose { registerKeyHandler(null) }
     }
 
@@ -185,6 +213,10 @@ fun SearchScreen(
         keyboard?.show()
         listState.scrollToItem(0)
     }
+
+    val query = controller.query
+    val items = controller.items
+    val current = controller.current
 
     // Garde la sélection visible lors de la navigation au clavier.
     LaunchedEffect(current, items) {
@@ -237,15 +269,11 @@ fun SearchScreen(
             ) {
                 SearchField(
                     query = query,
-                    onQueryChange = {
-                        query = it
-                        selected = 0
-                    },
+                    onQueryChange = controller::updateQuery,
                     focusRequester = focusRequester,
-                    onGo = { activate(current) },
+                    onGo = { controller.activate() },
                     onClear = {
-                        query = TextFieldValue("")
-                        selected = 0
+                        controller.clear()
                         focusRequester.requestFocus()
                     },
                 )
@@ -273,7 +301,7 @@ fun SearchScreen(
                                 selected = index == current,
                                 query = query.text.trim(),
                                 repository = repository,
-                                onClick = { activate(index) },
+                                onClick = { controller.activate(index) },
                             )
                         }
                     }

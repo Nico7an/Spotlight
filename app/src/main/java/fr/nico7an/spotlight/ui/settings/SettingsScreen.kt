@@ -341,10 +341,6 @@ private fun UpdatesGroup(status: SystemStatus, settings: SettingsStore) {
         if (state is UpdateState.Idle || state is UpdateState.Failed) manager.check()
     }
 
-    fun install() {
-        if (status.canInstallPackages) manager.install() else context.openInstallPermission()
-    }
-
     SettingsGroup("Mises à jour") {
         SettingsRow(
             title = "Spotlight ${BuildConfig.VERSION_NAME}",
@@ -370,7 +366,11 @@ private fun UpdatesGroup(status: SystemStatus, settings: SettingsStore) {
                     is UpdateState.Downloading ->
                         CircularProgressIndicator(progress = { s.progress }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp)
                     is UpdateState.Available ->
-                        FilledTonalButton(onClick = ::install) { Text("Installer") }
+                        FilledTonalButton(
+                            onClick = {
+                                if (status.canInstallPackages) manager.install() else context.openInstallPermission()
+                            },
+                        ) { Text("Installer") }
                     else -> TextButton(onClick = { manager.check() }) { Text("Rechercher") }
                 }
             },
