@@ -4,9 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,7 +40,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,8 +58,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.nico7an.spotlight.BuildConfig
 import fr.nico7an.spotlight.R
-import fr.nico7an.spotlight.core.Diagnostics
-import fr.nico7an.spotlight.core.DiagnosticsState
 import fr.nico7an.spotlight.core.Shortcut
 import fr.nico7an.spotlight.data.SettingsStore
 import fr.nico7an.spotlight.service.XiaomiPermissions
@@ -91,7 +85,6 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
     var suggestions by remember { mutableStateOf(settings.showSuggestions) }
     var blur by remember { mutableStateOf(settings.blurBackground) }
     var recording by remember { mutableStateOf(false) }
-    val diagnostics by Diagnostics.state.collectAsState()
 
     fun applyShortcut(value: Shortcut) {
         shortcut = value
@@ -111,7 +104,7 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
 
                 item {
                     SettingsGroup {
-                        if (serviceEnabled && popupAllowed != false && !diagnostics.launchBlocked) {
+                        if (serviceEnabled && popupAllowed != false) {
                             SettingsRow(
                                 title = "Spotlight est prêt",
                                 subtitle = "Appuyez sur ${shortcut.label()} pour rechercher une app",
@@ -164,7 +157,6 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
                     }
                 }
 
-                item { DiagnosticsGroup(diagnostics, serviceEnabled) }
 
                 item {
                     SettingsGroup("Raccourci d'ouverture") {
@@ -280,41 +272,6 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
                 recording = false
             },
             onDismiss = { recording = false },
-        )
-    }
-}
-
-@Composable
-private fun DiagnosticsGroup(state: DiagnosticsState, serviceEnabled: Boolean) {
-    val palette = LocalSpotlightPalette.current
-    val time = remember { SimpleDateFormat("HH:mm:ss", Locale.FRANCE) }
-    SettingsGroup("Diagnostic") {
-        SettingsRow(
-            title = "Connexion du service",
-            subtitle = when {
-                state.serviceConnected -> "Connecté : le service reçoit le clavier"
-                serviceEnabled -> "Activé mais pas connecté : désactivez puis réactivez le service, ou redémarrez la tablette"
-                else -> "Service désactivé"
-            },
-            leading = {
-                if (state.serviceConnected) StatusBadge(Icons.Rounded.Check, palette.success)
-                else StatusBadge(Icons.Rounded.Warning, palette.warning)
-            },
-        )
-        GroupDivider()
-        SettingsRow(
-            title = "Dernière touche reçue",
-            subtitle = state.lastKey?.let { "$it  ·  ${time.format(Date(state.lastKeyAt))}" }
-                ?: "Aucune pour l'instant : appuyez sur une touche du clavier",
-        )
-        GroupDivider()
-        SettingsRow(
-            title = "Dernier déclenchement",
-            subtitle = when {
-                state.triggeredAt == 0L -> "Le raccourci n'a pas encore été détecté"
-                state.launchBlocked -> "${time.format(Date(state.triggeredAt))} · détecté, mais la fenêtre a été bloquée par le système"
-                else -> "${time.format(Date(state.triggeredAt))} · détecté et ouvert"
-            },
         )
     }
 }

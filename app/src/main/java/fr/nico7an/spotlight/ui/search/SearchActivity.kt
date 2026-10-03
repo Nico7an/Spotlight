@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import fr.nico7an.spotlight.R
-import fr.nico7an.spotlight.core.Diagnostics
 import fr.nico7an.spotlight.data.AppEntry
 import fr.nico7an.spotlight.data.AppRepository
 import fr.nico7an.spotlight.data.SettingsStore
@@ -36,7 +35,6 @@ class SearchActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = transparent, navigationBarStyle = transparent)
         super.onCreate(savedInstanceState)
         current = WeakReference(this)
-        Diagnostics.searchOpened()
 
         val settings = SettingsStore.get(this)
         setupWindow(settings.blurBackground)

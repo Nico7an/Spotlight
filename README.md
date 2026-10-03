@@ -35,9 +35,6 @@
 5. Toujours sur HyperOS, pour éviter que le système ne coupe le service : *Démarrage automatique* activé et
    *Économiseur de batterie → Aucune restriction*.
 
-En cas de souci, la section **Diagnostic** de l'app indique si le service est connecté, la dernière touche reçue
-et si le dernier déclenchement a été bloqué.
-
 > Les mises à jour s'installent par-dessus la version précédente : toutes les releases sont signées avec la même clé
 > (`app/spotlight.keystore`, volontairement publique, l'app n'étant pas destinée au Play Store).
 
