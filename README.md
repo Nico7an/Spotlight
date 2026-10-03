@@ -29,11 +29,17 @@
 2. Ouvrez **Spotlight**, puis touchez **Activer** : dans *Accessibilité*, activez **Spotlight – raccourci clavier**.
 3. Si l'option est grisée (« paramètre restreint », Android 13+ / HyperOS) :
    *Paramètres → Applications → Spotlight → ⋮ (en haut à droite) → Autoriser les paramètres restreints*, puis recommencez l'étape 2.
-4. **Xiaomi / HyperOS (indispensable)** : *Infos de l'app → Autorisations → Autres autorisations →*
-   **Afficher des fenêtres pop-up en arrière-plan** → Autoriser. Sans cela, le raccourci est bien détecté mais HyperOS
-   empêche silencieusement la fenêtre de s'ouvrir (le bouton **Autoriser** de l'app ouvre directement cet écran).
-5. Toujours sur HyperOS, pour éviter que le système ne coupe le service : *Démarrage automatique* activé et
-   *Économiseur de batterie → Aucune restriction*.
+4. **Xiaomi / HyperOS (indispensable)** : la section *Fonctionnement en arrière-plan* de l'app liste les autorisations
+   à accorder, chacune avec un bouton qui ouvre directement le bon écran :
+   - **Afficher des fenêtres pop-up en arrière-plan** : sans elle, le raccourci est détecté mais la fenêtre ne s'ouvre pas ;
+   - **Démarrage automatique** : sans elle, HyperOS tue le service dès qu'on quitte l'app et ne le relance jamais ;
+   - **Batterie sans restriction**.
+
+   Si l'app indique « Service arrêté par le système », désactivez puis réactivez le service dans l'accessibilité
+   après avoir accordé ces autorisations.
+
+Le service tourne au premier plan pour résister au nettoyage mémoire de HyperOS. Sa notification (priorité minimale)
+n'apparaît que si vous autorisez les notifications de Spotlight.
 
 > Les mises à jour s'installent par-dessus la version précédente : toutes les releases sont signées avec la même clé
 > (`app/spotlight.keystore`, volontairement publique, l'app n'étant pas destinée au Play Store).

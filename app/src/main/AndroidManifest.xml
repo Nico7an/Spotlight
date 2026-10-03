@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Garde le service en vie sur HyperOS, qui tue agressivement les apps en arrière-plan. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Visibilité des apps lançables (Android 11+) sans QUERY_ALL_PACKAGES. -->
     <queries>
         <intent>
@@ -20,6 +25,7 @@
 
         <activity
             android:name=".ui.settings.MainActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:launchMode="singleTop">
             <intent-filter>
@@ -47,8 +53,12 @@
         <service
             android:name=".service.SpotlightAccessibilityService"
             android:exported="true"
+            android:foregroundServiceType="specialUse"
             android:label="@string/a11y_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Raccourci clavier global : écoute du clavier physique pour ouvrir la recherche d'apps" />
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>

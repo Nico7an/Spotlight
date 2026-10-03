@@ -1,5 +1,6 @@
 package fr.nico7an.spotlight.ui.settings
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -75,7 +76,7 @@ private val PRESETS = listOf(
 )
 
 @Composable
-fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: SettingsStore) {
+fun SettingsScreen(status: SystemStatus, settings: SettingsStore) {
     val context = LocalContext.current
     val palette = LocalSpotlightPalette.current
 
@@ -102,61 +103,11 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
             ) {
                 item { Header() }
 
-                item {
-                    SettingsGroup {
-                        if (serviceEnabled && popupAllowed != false) {
-                            SettingsRow(
-                                title = "Spotlight est prêt",
-                                subtitle = "Appuyez sur ${shortcut.label()} pour rechercher une app",
-                                leading = { StatusBadge(Icons.Rounded.Check, palette.success) },
-                            )
-                        } else if (serviceEnabled) {
-                            SettingsRow(
-                                title = "Service actif, ouverture bloquée",
-                                subtitle = "HyperOS empêche Spotlight de s'afficher par-dessus les autres apps. Autorisez « Afficher des fenêtres pop-up en arrière-plan » ci-dessous.",
-                                leading = { StatusBadge(Icons.Rounded.Warning, palette.warning) },
-                            )
-                        } else {
-                            SettingsRow(
-                                title = "Service désactivé",
-                                subtitle = "Activez « Spotlight – raccourci clavier » dans l'accessibilité pour détecter le raccourci.",
-                                leading = { StatusBadge(Icons.Rounded.Warning, palette.warning) },
-                                trailing = {
-                                    FilledTonalButton(onClick = { context.openAccessibilitySettings() }) { Text("Activer") }
-                                },
-                                onClick = { context.openAccessibilitySettings() },
-                            )
-                            GroupDivider()
-                            SettingsRow(
-                                title = "Activation grisée ?",
-                                subtitle = "Infos de l'app → ⋮ → « Autoriser les paramètres restreints », puis réessayez.",
-                                trailing = { Chevron() },
-                                onClick = { context.openAppDetails() },
-                            )
-                        }
-                        if (XiaomiPermissions.isXiaomi) {
-                            GroupDivider()
-                            SettingsRow(
-                                title = "Pop-ups en arrière-plan",
-                                subtitle = when (popupAllowed) {
-                                    true -> "Autorisé : Spotlight peut s'afficher par-dessus les autres apps"
-                                    false -> "Refusé. Autorisations → Autres autorisations → « Afficher des fenêtres pop-up en arrière-plan »"
-                                    null -> "Requis sur HyperOS. Autorisations → Autres autorisations → « Afficher des fenêtres pop-up en arrière-plan »"
-                                },
-                                leading = {
-                                    if (popupAllowed == true) StatusBadge(Icons.Rounded.Check, palette.success)
-                                    else StatusBadge(Icons.Rounded.Warning, palette.warning)
-                                },
-                                trailing = {
-                                    if (popupAllowed == true) Chevron()
-                                    else FilledTonalButton(onClick = { XiaomiPermissions.openPermissionEditor(context) }) { Text("Autoriser") }
-                                },
-                                onClick = { XiaomiPermissions.openPermissionEditor(context) },
-                            )
-                        }
-                    }
-                }
+                item { StatusGroup(status, shortcut) }
 
+                if (status.isXiaomi || !status.batteryUnrestricted) {
+                    item { BackgroundGroup(status) }
+                }
 
                 item {
                     SettingsGroup("Raccourci d'ouverture") {
@@ -264,7 +215,7 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
 
     if (recording) {
         RecordShortcutDialog(
-            serviceEnabled = serviceEnabled,
+            serviceEnabled = status.serviceRunning,
             onRecorded = {
                 custom = it
                 settings.customShortcut = it
@@ -274,6 +225,112 @@ fun SettingsScreen(serviceEnabled: Boolean, popupAllowed: Boolean?, settings: Se
             onDismiss = { recording = false },
         )
     }
+}
+
+@Composable
+private fun StatusGroup(status: SystemStatus, shortcut: Shortcut) {
+    val context = LocalContext.current
+    val palette = LocalSpotlightPalette.current
+    SettingsGroup {
+        when {
+            status.ready -> SettingsRow(
+                title = "Spotlight est prêt",
+                subtitle = "Appuyez sur ${shortcut.label()} pour rechercher une app",
+                leading = { StatusBadge(Icons.Rounded.Check, palette.success) },
+            )
+            !status.serviceEnabled -> {
+                SettingsRow(
+                    title = "Service désactivé",
+                    subtitle = "Activez « Spotlight – raccourci clavier » dans l'accessibilité pour détecter le raccourci.",
+                    leading = { StatusBadge(Icons.Rounded.Warning, palette.warning) },
+                    trailing = {
+                        FilledTonalButton(onClick = { context.openAccessibilitySettings() }) { Text("Activer") }
+                    },
+                    onClick = { context.openAccessibilitySettings() },
+                )
+                GroupDivider()
+                SettingsRow(
+                    title = "Activation grisée ?",
+                    subtitle = "Infos de l'app → ⋮ → « Autoriser les paramètres restreints », puis réessayez.",
+                    trailing = { Chevron() },
+                    onClick = { context.openAppDetails() },
+                )
+            }
+            !status.serviceRunning -> SettingsRow(
+                title = "Service arrêté par le système",
+                subtitle = "Désactivez puis réactivez « Spotlight – raccourci clavier » dans l'accessibilité, " +
+                    "après avoir autorisé le démarrage automatique ci-dessous.",
+                leading = { StatusBadge(Icons.Rounded.Warning, palette.warning) },
+                trailing = {
+                    FilledTonalButton(onClick = { context.openAccessibilitySettings() }) { Text("Relancer") }
+                },
+                onClick = { context.openAccessibilitySettings() },
+            )
+            else -> SettingsRow(
+                title = "Ouverture bloquée",
+                subtitle = "HyperOS empêche Spotlight de s'afficher par-dessus les autres apps. " +
+                    "Autorisez les pop-ups en arrière-plan ci-dessous.",
+                leading = { StatusBadge(Icons.Rounded.Warning, palette.warning) },
+            )
+        }
+    }
+}
+
+/** Autorisations qui empêchent HyperOS de bloquer la fenêtre ou de tuer le service. */
+@Composable
+private fun BackgroundGroup(status: SystemStatus) {
+    val context = LocalContext.current
+    SettingsGroup("Fonctionnement en arrière-plan") {
+        if (status.isXiaomi) {
+            PermissionRow(
+                title = "Pop-ups en arrière-plan",
+                granted = status.popupAllowed,
+                grantedText = "Autorisé : la recherche peut s'ouvrir par-dessus les autres apps",
+                missingText = "Autres autorisations → « Afficher des fenêtres pop-up en arrière-plan »",
+                onClick = { XiaomiPermissions.openPermissionEditor(context) },
+            )
+            GroupDivider()
+            PermissionRow(
+                title = "Démarrage automatique",
+                granted = status.autoStartAllowed,
+                grantedText = "Autorisé : le service redémarre si le système l'arrête",
+                missingText = "Indispensable pour que le raccourci marche une fois l'app fermée",
+                onClick = { XiaomiPermissions.openAutoStart(context) },
+            )
+            GroupDivider()
+        }
+        PermissionRow(
+            title = "Batterie sans restriction",
+            granted = status.batteryUnrestricted,
+            grantedText = "Spotlight n'est pas mis en veille par l'économiseur de batterie",
+            missingText = "Évite que le service soit coupé en veille",
+            onClick = { context.requestUnrestrictedBattery() },
+        )
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    granted: Boolean?,
+    grantedText: String,
+    missingText: String,
+    onClick: () -> Unit,
+) {
+    val palette = LocalSpotlightPalette.current
+    SettingsRow(
+        title = title,
+        subtitle = if (granted == true) grantedText else missingText,
+        leading = {
+            if (granted == true) StatusBadge(Icons.Rounded.Check, palette.success)
+            else StatusBadge(Icons.Rounded.Warning, palette.warning)
+        },
+        trailing = {
+            if (granted == true) Chevron()
+            else FilledTonalButton(onClick = onClick) { Text("Autoriser") }
+        },
+        onClick = onClick,
+    )
 }
 
 @Composable
@@ -423,6 +480,13 @@ private fun Chevron() {
 
 private fun Context.openAccessibilitySettings() {
     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
+@SuppressLint("BatteryLife")
+private fun Context.requestUnrestrictedBattery() {
+    val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { startActivity(request) }.onFailure { openAppDetails() }
 }
 
 private fun Context.openAppDetails() {
